@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>WanderSmart | תכנון טיול ומלווה אישי בשטח - וינה</title>
+  <meta name="description" content="אפליקציית תכנון טיולים חכמה ומלווה שטח בוינה: שעות פתיחה רשמיות מאומתות, מפה אינטראקטיבית, השוואת כרטיסי אטרקציות, מודול הופעות, מדריך AI ומצב גשם.">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧭</text></svg>">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Top Navigation & Brand Header -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand-section">
+        <div class="brand-logo-glow">🧭</div>
+        <div class="brand-text">
+          <h1>
+            WanderSmart
+            <span class="badge-city">וינה 2026</span>
+          </h1>
+          <div class="brand-dates">18–22 באוקטובר 2026 • מלון PLAZA INN Amedia Wien</div>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <!-- Live vs Planner Mode Toggle -->
+        <div class="segmented-control">
+          <button class="segmented-btn active" data-app-mode="live">
+            🚀 מצב טיול בשטח
+          </button>
+          <button class="segmented-btn" data-app-mode="planner">
+            📝 תכנון מסלול
+          </button>
+        </div>
+
+        <div class="header-action-buttons">
+          <button class="btn-header btn-primary-header" onclick="App.openAddAttractionModal()" title="הוספת יעד חדש ידנית">
+            ➕ הוסף יעד
+          </button>
+          <button class="btn-header btn-danger-header" onclick="App.clearAllData()" title="נקה את כל האטרקציות והאירועים והתחל מחדש">
+            🗑️ נקה הכל
+          </button>
+          <button class="btn-header btn-gps" onclick="App.autoResumeCurrentLocationAndDate(true)" title="זהה מיקום נוכחי והמשך את הטיול מהנקודה הנכונה">
+            📍 המשך מהמיקום שלי
+          </button>
+          <button class="btn-header" onclick="App.openImportModal()" title="טעינת תוכנית מקובץ אקסל, PDF או טקסט">
+            📂 יבוא קובץ
+          </button>
+          <button class="btn-header btn-gold" onclick="App.openPassOptimizerModal()">
+            💳 איך הכי זול לשלם?
+          </button>
+          <button class="btn-header" onclick="App.printDayItinerary()" title="הדפסת תוכנית יומית">
+            🖨️ הדפסה
+          </button>
+          <button class="btn-header btn-whatsapp" onclick="App.shareItinerary('whatsapp')" title="שיתוף המסלול ב-WhatsApp">
+            📱 שיתוף
+          </button>
+          <button id="postponed-badge-btn" class="btn-header badge-postponed" onclick="App.openPostponedDrawer()" style="display: none;">
+            ⏳ יעדים שנדחו (0)
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Weather Indicator & Smart Rain Trigger Bar -->
+  <div class="weather-bar-wrapper">
+    <div class="weather-bar-inner" id="weather-indicator-bar">
+      <!-- Injected dynamically by App.renderHeaderWeather() -->
+    </div>
+  </div>
+
+  <!-- Wanderlog Trip Cover Hero Banner -->
+  <section class="trip-hero-banner">
+    <div class="trip-hero-inner">
+      <div class="trip-hero-content">
+        <div class="trip-hero-badges">
+          <span class="hero-chip chip-coral">🇦🇹 וינה, אוסטריה</span>
+          <span class="hero-chip chip-dates">📅 18–22 באוקטובר 2026</span>
+          <span class="hero-chip chip-duration">5 ימים</span>
+        </div>
+        <h2 class="trip-hero-title">הטיול שלי לוינה • Trip to Vienna</h2>
+        <div class="trip-hero-hotel-row">
+          <div class="hotel-info-tag">
+            <span class="hotel-icon-tag">🏨</span>
+            <span class="hotel-name-tag">מלון הבסיס: <strong>PLAZA INN Amedia Wien</strong></span>
+            <span class="hotel-metro-tag">(רובע 3 • U-Bahn U3)</span>
+          </div>
+          <a href="https://www.google.com/maps/dir/?api=1&destination=48.1922176,16.3996007" target="_blank" class="hero-gmaps-link" title="נווט למלון ב-Google Maps">
+            🧭 נווט למלון ב-Google Maps ↗
+          </a>
+        </div>
+      </div>
+      <div class="trip-hero-quick-actions">
+        <button class="hero-action-btn btn-hero-add" onclick="App.openAddAttractionModal()" title="הוספת יעד למסלול">
+          ➕ הוסף יעד
+        </button>
+        <button class="hero-action-btn btn-hero-clear" onclick="App.clearAllData()" title="נקה את כל היעדים">
+          🗑️ נקה הכל
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Container -->
+  <main class="app-main">
+    <!-- Left Column: Daily Timeline & Attractions -->
+    <section class="timeline-column">
+      
+      <!-- Day Selector Tabs -->
+      <div class="day-tabs-scroll" id="day-tabs-container">
+        <!-- Injected dynamically by App.renderDayTabs() -->
+      </div>
+
+      <!-- Day Overview, Progress & Transit Selector -->
+      <div class="day-controls-bar">
+        <div class="day-progress-wrapper">
+          <div class="progress-header">
+            <span id="day-progress-text">התקדמות יומית: 0 מתוך 3 יעדים הושלמו (0%)</span>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="day-progress-bar"></div>
+          </div>
+        </div>
+
+        <!-- Day Start Time Picker (שעת התחלה יומית ידנית) -->
+        <div class="day-start-time-wrapper">
+          <div class="start-time-header">
+            <span class="start-time-label">⏰ שעת יציאה מהמלון (יום <span id="start-time-day-label">1</span>):</span>
+            <input type="time" id="day-start-time-input" class="start-time-input" value="09:00" onchange="App.handleDayStartTimeChange(event)">
+          </div>
+          <div class="start-time-presets">
+            <span class="presets-label">קביעה מהירה:</span>
+            <button type="button" class="preset-time-btn" data-time="08:00" onclick="App.setDayStartTime('08:00')">08:00</button>
+            <button type="button" class="preset-time-btn" data-time="08:30" onclick="App.setDayStartTime('08:30')">08:30</button>
+            <button type="button" class="preset-time-btn active" data-time="09:00" onclick="App.setDayStartTime('09:00')">09:00</button>
+            <button type="button" class="preset-time-btn" data-time="09:30" onclick="App.setDayStartTime('09:30')">09:30</button>
+            <button type="button" class="preset-time-btn" data-time="10:00" onclick="App.setDayStartTime('10:00')">10:00</button>
+          </div>
+        </div>
+
+        <div class="transit-mode-selector">
+          <span class="selector-label">חישוב זמני מעבר בין יעדים לפי:</span>
+          <div class="transit-pills">
+            <button class="transit-btn active" data-transit-mode="transit">
+              🚇 תחבורה ציבורית
+            </button>
+            <button class="transit-btn" data-transit-mode="walk">
+              🚶 ברגל
+            </button>
+            <button class="transit-btn" data-transit-mode="drive">
+              🚗 רכב / מונית
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline List (Stops, Connectors, Cards) -->
+      <div class="timeline-feed" id="timeline-list-container">
+        <!-- Injected dynamically by App.renderTimeline() -->
+      </div>
+    </section>
+
+    <!-- Right Column: Sticky Interactive Map & Booked Shows -->
+    <aside class="sidebar-column">
+      <!-- Interactive Map Card -->
+      <div class="map-card-wrapper">
+        <div class="map-card-header">
+          <div class="map-title">
+            <span>🗺️ מפת המסלול (Wanderlog)</span>
+          </div>
+          <div class="map-header-buttons">
+            <button class="btn-map-control" onclick="MapManager.fitDayBounds()" title="מרכז מפה על כל יעדי היום">
+              🎯 מרכז יעדים
+            </button>
+            <button class="btn-map-control" onclick="MapManager.focusOnHotel()" title="התמקד במלון הבסיס">
+              🏨 הצג מלון
+            </button>
+          </div>
+        </div>
+        <div id="map-container"></div>
+      </div>
+
+      <!-- Booked Shows & Concerts Section -->
+      <div class="booked-events-wrapper">
+        <div class="sidebar-section-header">
+          <span>🎭 הופעות ואירועים עם כרטיסים שמורים</span>
+        </div>
+        <div id="booked-events-container">
+          <!-- Injected dynamically by App.renderBookedEvents() -->
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- AI Guide Story Modal -->
+  <div class="modal-overlay" id="ai-guide-modal">
+    <div class="modal-box">
+      <button class="modal-close-btn" onclick="App.closeModal('ai-guide-modal')">✕</button>
+      <div id="ai-modal-content">
+        <!-- Injected dynamically by App.openAiGuideModal() -->
+      </div>
+    </div>
+  </div>
+
+  <!-- City Pass Optimizer Modal -->
+  <div class="modal-overlay" id="pass-optimizer-modal">
+    <div class="modal-box large-modal">
+      <button class="modal-close-btn" onclick="App.closeModal('pass-optimizer-modal')">✕</button>
+      <div id="pass-optimizer-content">
+        <!-- Injected dynamically by App.openPassOptimizerModal() -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Postponed Attractions Drawer -->
+  <div class="modal-overlay" id="postponed-drawer">
+    <div class="modal-box">
+      <button class="modal-close-btn" onclick="App.closeModal('postponed-drawer')">✕</button>
+      <div class="drawer-header">
+        <h3>⏳ יעדים שנדחו ועדיין מעניינים אותך</h3>
+        <p class="drawer-sub">שבצי אותם בקלות בחלון פנוי באחד הימים הבאים:</p>
+      </div>
+      <div id="postponed-list-container">
+        <!-- Injected dynamically by App.openPostponedDrawer() -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Modal (Excel, PDF, Text) -->
+  <div class="modal-overlay" id="import-modal">
+    <div class="modal-box large-modal">
+      <button class="modal-close-btn" onclick="App.closeModal('import-modal')">✕</button>
+      <div class="modal-title-bar">
+        <h3>📂 טעינת תוכנית טיול מקובץ</h3>
+        <p class="modal-sub">אפשר לטעון קובץ אקסל (.xlsx, .csv), PDF או קובץ טקסט - או להדביק כאן ישירות:</p>
+      </div>
+
+      <div class="import-config-row">
+        <label for="import-target-day"><strong>שבץ את היעדים ב:</strong></label>
+        <select id="import-target-day" class="import-select">
+          <option value="auto">זיהוי ימים אוטומטי (לכל תקופת הטיול)</option>
+          <option value="1">יום 1 בלבד</option>
+          <option value="2">יום 2 בלבד</option>
+          <option value="3">יום 3 בלבד</option>
+          <option value="4">יום 4 בלבד</option>
+          <option value="5">יום 5 בלבד</option>
+        </select>
+      </div>
+
+      <div class="import-upload-zone">
+        <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv,.txt,.md,.pdf" onchange="App.handleFileSelected(event)" style="display: none;">
+        <button class="btn btn-browse" onclick="document.getElementById('import-file-input').click()">
+          📁 בחרי קובץ מהמחשב/טלפון
+        </button>
+        <span class="upload-hint">תומך ב-Excel, CSV, TXT, PDF</span>
+      </div>
+
+      <div class="import-or-divider">או הדביקי כאן טקסט חופשי:</div>
+
+      <textarea id="import-paste-text" class="import-textarea" placeholder="לדוגמה:
+יום 1:
+09:00 - קתדרלת סטפנוס הקדוש
+11:30 - ארמון הופבורג
+14:00 - בית העירייה של וינה"></textarea>
+
+      <div class="import-actions-bar">
+        <button class="btn btn-parse-text" onclick="App.handlePasteImport()">
+          ⚡ פענח טקסט שהודבק
+        </button>
+      </div>
+
+      <!-- Preview of parsed places -->
+      <div id="import-preview-list" class="import-preview-wrapper"></div>
+
+      <div class="import-footer-buttons">
+        <button id="import-confirm-btn" class="btn btn-confirm-import" onclick="App.confirmImport()" style="display: none;">
+          ✓ הוסף למסלול הטיול עכשיו
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Smart Search & Add Attraction -->
+  <div class="modal-overlay" id="add-attraction-modal">
+    <div class="modal-box large-modal">
+      <button class="modal-close-btn" onclick="App.closeModal('add-attraction-modal')">✕</button>
+      <div class="modal-title-bar">
+        <h3>🔍 חיפוש והוספת יעד למסלול</h3>
+        <p class="modal-sub">חפשי אטרקציה - נציג שעות פתיחה, מחירים, אירועים מיוחדים, האם מקורה וזמן ממוצע לאישורך:</p>
+      </div>
+
+      <!-- Search Input & Day Target Row -->
+      <div class="search-hero-bar">
+        <div class="search-input-wrapper">
+          <span class="search-icon-inside">🔍</span>
+          <input type="text" id="add-attr-search-input" class="search-hero-input" placeholder="חפשי אטרקציה (למשל: שטפנסדום, עוגב, שונברון, קרל, אופרה, בלוודר, פראטר...)" oninput="App.handleAttractionSearch(event)">
+          <button type="button" class="btn-clear-search" onclick="App.clearAttractionSearch()" title="נקה חיפוש">✕</button>
+        </div>
+        <div class="search-day-target">
+          <label for="add-attr-day"><strong>שבץ ביום:</strong></label>
+          <select id="add-attr-day" class="form-input search-day-select" onchange="App.handleSearchDayChange(event)">
+            <option value="1">יום 1 • 18/10 (א')</option>
+            <option value="2">יום 2 • 19/10 (ב')</option>
+            <option value="3">יום 3 • 20/10 (ג')</option>
+            <option value="4">יום 4 • 21/10 (ד')</option>
+            <option value="5">יום 5 • 22/10 (ה')</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Quick 1-Click Search Filter Chips -->
+      <div class="quick-suggest-box">
+        <div class="quick-suggest-label">⚡ בחירה מהירה של אתר מוביל לצפייה בפרטים ואישור:</div>
+        <div class="quick-suggest-grid">
+          <button type="button" class="quick-spot-btn" onclick="App.filterSearchByKeyword('סטפנוס', 'stephansdom')">⛪ סנט סטפן (קונצרט עוגב)</button>
+          <button type="button" class="quick-spot-btn" onclick="App.filterSearchByKeyword('קרלסקירכה', 'karlskirche')">🎻 כנסיית קרל (ויוואלדי)</button>
+          <button type="button" class="quick-spot-btn" onclick="App.filterSearchByKeyword('פטרסקירכה', 'peterskirche')">🎵 כנסיית פטרוס (עוגב חינם)</button>
+          <button type="button" class="quick-spot-btn" onclick="App.filterSearchByKeyword('שונברון', 'schonbrunn')">🏰 שונברון (קונצרט מוצרט)</button>
+          <button type="button" class="quick-spot-btn" onclick="App.filterSearchByKeyword('הופבורג', 'hofburg')">👑 הופבורג (סוסי ליפיצן)</button>
+          <button type="button" class="quick-spot-btn" onclick="App.filterSearchByKeyword('אופרה', 'staatsoper')">🎭 האופרה הממלכתית</button>
+          <button type="button" class="quick-spot-btn" onclick="App.filterSearchByKeyword('בלוודר', 'belvedere')">🖼️ בלוודר (קלימט)</button>
+          <button type="button" class="quick-spot-btn" onclick="App.filterSearchByKeyword('מוזיקפראיין', 'musikverein')">🎺 מוזיקפראיין (אולם הזהב)</button>
+          <button type="button" class="quick-spot-btn" onclick="App.filterSearchByKeyword('תולדות האמנות', 'khm')">🏛️ המוזיאון לתולדות האמנות</button>
+          <button type="button" class="quick-spot-btn" onclick="App.filterSearchByKeyword('אלברטינה', 'albertina')">🎨 מוזיאון אלברטינה</button>
+          <button type="button" class="quick-spot-btn" onclick="App.filterSearchByKeyword('פראטר', 'prater')">🎡 פראטר (גלגל ענק)</button>
+        </div>
+      </div>
+
+      <!-- Candidates / Matching Results Feed -->
+      <div id="attr-search-results-container" class="search-candidates-feed">
+        <!-- Injected dynamically by App.renderCandidateCards() -->
+      </div>
+
+      <!-- Collapsible Manual Custom Form -->
+      <details class="manual-custom-details">
+        <summary class="manual-custom-summary">➕ או הזיני יעד אחר באופן ידני (אם לא נמצא ברשימה)</summary>
+        <div class="manual-custom-content">
+          <div class="form-group">
+            <label for="add-attr-name"><strong>שם האטרקציה / היעד:</strong></label>
+            <input type="text" id="add-attr-name" class="form-input" placeholder="למשל: מסעדה ספציפית, גלריה או אתר מותאם">
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="add-attr-duration"><strong>זמן ביקור ממוצע (דקות):</strong></label>
+              <input type="number" id="add-attr-duration" class="form-input" value="60" min="15" step="15">
+            </div>
+            <div class="form-group flex-1">
+              <label for="add-attr-price"><strong>מחיר כרטיס (€):</strong></label>
+              <input type="number" id="add-attr-price" class="form-input" value="0" min="0" step="0.5">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="add-attr-hours"><strong>שעות פתיחה:</strong></label>
+              <input type="text" id="add-attr-hours" class="form-input" placeholder="למשל: 09:00–18:00">
+            </div>
+            <div class="form-group flex-1 checkbox-group">
+              <label>
+                <input type="checkbox" id="add-attr-indoor" checked>
+                <span>מקום מקורה (מותאם לגשם)</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="add-attr-notes"><strong>הערות / אירועים מיוחדים:</strong></label>
+            <textarea id="add-attr-notes" class="form-input form-textarea" placeholder="הערות או פרטי אירוע מיוחד"></textarea>
+          </div>
+          <button class="btn btn-primary btn-save-attr" onclick="App.saveCustomAttraction()">
+            ✓ שמור והוסף למסלול
+          </button>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- Modal: Add Event / Concert Manually -->
+  <div class="modal-overlay" id="add-event-modal">
+    <div class="modal-box">
+      <button class="modal-close-btn" onclick="App.closeModal('add-event-modal')">✕</button>
+      <div class="modal-title-bar">
+        <h3>🎟️ הוספת הופעה / אירוע עם כרטיסים</h3>
+        <p class="modal-sub">שמרי את פרטי הכרטיס, האולם, המושב וקוד הלבוש במקום אחד:</p>
+      </div>
+
+      <div class="form-group">
+        <label for="add-event-name"><strong>שם ההופעה / המופע:</strong></label>
+        <input type="text" id="add-event-name" class="form-input" placeholder="למשל: קונצרט מוצרט באולם המוזיקפראיין">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label for="add-event-day"><strong>שבץ ביום:</strong></label>
+          <select id="add-event-day" class="form-input">
+            <option value="1">יום 1</option>
+            <option value="2">יום 2</option>
+            <option value="3">יום 3</option>
+            <option value="4">יום 4</option>
+            <option value="5">יום 5</option>
+          </select>
+        </div>
+        <div class="form-group flex-1">
+          <label for="add-event-venue"><strong>אולם / מיקום:</strong></label>
+          <input type="text" id="add-event-venue" class="form-input" placeholder="למשל: Musikverein, Bösendorferstraße 12">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label for="add-event-doors"><strong>פתיחת דלתות:</strong></label>
+          <input type="time" id="add-event-doors" class="form-input" value="19:15">
+        </div>
+        <div class="form-group flex-1">
+          <label for="add-event-start"><strong>שעת תחילת מופע:</strong></label>
+          <input type="time" id="add-event-start" class="form-input" value="20:00">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label for="add-event-hall"><strong>אולם / יציע:</strong></label>
+          <input type="text" id="add-event-hall" class="form-input" placeholder="Großer Saal / יציע מרכזי">
+        </div>
+        <div class="form-group flex-1">
+          <label for="add-event-seat"><strong>שורה ומושב:</strong></label>
+          <input type="text" id="add-event-seat" class="form-input" placeholder="שורה 8, מושב 12">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label for="add-event-code"><strong>קוד אישור / הזמנה:</strong></label>
+          <input type="text" id="add-event-code" class="form-input" placeholder="למשל: CONF-98721">
+        </div>
+        <div class="form-group flex-1">
+          <label for="add-event-dress"><strong>קוד לבוש:</strong></label>
+          <input type="text" id="add-event-dress" class="form-input" placeholder="אלגנטי / Smart Casual">
+        </div>
+      </div>
+
+      <div class="modal-footer-actions">
+        <button class="btn btn-primary btn-save-attr" onclick="App.saveCustomEvent()">
+          ✓ שמור מופע
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Element -->
+  <div id="app-toast" class="toast"></div>
+
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- SheetJS (Excel Parser) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- PDF.js (Mozilla PDF Parser) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+  <!-- App Application Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/pricing.js"></script>
+  <script src="js/importer.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
